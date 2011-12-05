@@ -1,0 +1,4 @@
+Criar classe base que faça:
+ - Registro Especializado, podendo filtrar a classe que vai rodar o teste por parâmetro da aplicação
+   Ex. -TestCase ClasseUm ClasseDois ClasseTres
+ 
