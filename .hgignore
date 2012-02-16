@@ -1,2 +1,4 @@
 syntax: glob
 *.dcu
+*.~dpk
+__history

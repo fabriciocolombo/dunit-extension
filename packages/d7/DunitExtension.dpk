@@ -32,7 +32,7 @@ requires
   xmlrtl;
 
 contains
-  TestRunnerUtils in '..\src\TestRunnerUtils.pas',
-  TestCaseExtension in '..\src\TestCaseExtension.pas';
+  TestRunnerUtils in '..\..\src\TestRunnerUtils.pas',
+  TestCaseExtension in '..\..\src\TestCaseExtension.pas';
 
 end.
