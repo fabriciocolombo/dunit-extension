@@ -2,7 +2,7 @@ unit TestCaseExtension;
 
 interface
 
-uses TestFramework, TypInfo;
+uses TestFramework, TypInfo, Classes;
 
 type
   TTestCaseExtension = class(TTestCase)
@@ -22,9 +22,31 @@ type
     procedure CheckEqualsText(expected, actual: string; msg: string = ''); virtual;
   end;
 
+  TestCaseExtensionClass = class of TTestCase;
+
 implementation
 
 uses SysUtils, Math, Types;
+
+type
+  TTestCaseEntries = class
+  private
+    FList: TStringList;
+
+    procedure LoadTestCasesEntry;
+
+    function FindCmdLineSwitchValue(const Switch: string; var Value: String): Boolean;
+  public
+    function IsEmpty: Boolean;
+
+    function matchClass(AClassName: TClass): Boolean;
+
+    constructor Create;
+    destructor Destroy; override;
+  end;
+
+var
+  _TestCasesEntries: TTestCaseEntries = nil;
 
 { TestCaseExtended }
 
@@ -140,7 +162,77 @@ end;
 
 class procedure TTestCaseExtension.RegisterTest(SuitePath: string);
 begin
-  TestFramework.RegisterTest(SuitePath, Self.Suite);
+  if _TestCasesEntries.IsEmpty or _TestCasesEntries.matchClass(Self) then
+  begin
+    TestFramework.RegisterTest(SuitePath, Self.Suite);
+  end;
 end;
 
+{ TTestCaseEntries }
+
+constructor TTestCaseEntries.Create;
+begin
+  FList := TStringList.Create;
+
+  LoadTestCasesEntry;
+end;
+
+destructor TTestCaseEntries.Destroy;
+begin
+  FList.Free;
+  inherited;
+end;
+
+function TTestCaseEntries.FindCmdLineSwitchValue(const Switch: string; var Value: String): Boolean;
+var
+  I: Integer;
+  S: string;
+begin
+  Value := EmptyStr;
+  for I := 1 to ParamCount do
+  begin
+    S := ParamStr(I);
+    if (S[1] in SwitchChars) then
+    begin
+      if (AnsiCompareText(Copy(S, 2, Maxint), Switch) = 0) then
+      begin
+        Result := True;
+
+        if (I < ParamCount) then
+        begin
+          Value := ParamStr(I+1); 
+        end;
+        Exit;
+      end;
+    end;
+  end;
+  Result := False;
+end;
+
+function TTestCaseEntries.IsEmpty: Boolean;
+begin
+  Result := (FList.Count = 0);
+end;
+
+procedure TTestCaseEntries.LoadTestCasesEntry;
+var
+  vClasses: String;
+begin
+  if Self.FindCmdLineSwitchValue('TestCases', vClasses) then
+  begin
+    FList.Text := StringReplace(vClasses, ';', sLineBreak, [rfReplaceAll]);
+  end;
+end;
+
+function TTestCaseEntries.matchClass(AClassName: TClass): Boolean;
+begin
+  Result := (FList.IndexOf(AClassName.ClassName) >= 0);
+end;
+
+initialization
+  _TestCasesEntries := TTestCaseEntries.Create; 
+
+finalization
+  FreeAndNil(_TestCasesEntries);
+  
 end.
