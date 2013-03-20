@@ -2,7 +2,7 @@ unit TestCaseExtension;
 
 interface
 
-uses TestFramework, TypInfo, Classes;
+uses TestFramework, TestExtensions, TypInfo, Classes;
 
 type
   TTestCaseExtension = class(TTestCase)
@@ -10,6 +10,7 @@ type
   public
     class procedure RegisterTest(SuitePath: string);overload;
     class procedure RegisterTest();overload;
+    class procedure RegisterRepeatedTest(AIterations: Integer; SuitePath: string='');
 
     procedure CheckEqualsDate(expected, actual: TDateTime; msg: string = ''); virtual;
     procedure CheckEqualsDouble(expected, actual: Double; msg: string = '';ErrorAddrs: Pointer = nil); overload;virtual;
@@ -21,8 +22,6 @@ type
     procedure CheckEqualsEnum(expected, actual: Variant; typeinfo: PTypeInfo; msg: string='';ErrorAddrs: Pointer = nil); virtual;
     procedure CheckEqualsText(expected, actual: string; msg: string = ''); virtual;
   end;
-
-  TestCaseExtensionClass = class of TTestCase;
 
 implementation
 
@@ -39,7 +38,9 @@ type
   public
     function IsEmpty: Boolean;
 
-    function matchClass(AClassName: TClass): Boolean;
+    function matchClass(AClassName: TTestCaseClass): Boolean;
+
+    function CanRegister(AClassName: TTestCaseClass): Boolean;
 
     constructor Create;
     destructor Destroy; override;
@@ -155,6 +156,14 @@ begin
   end;
 end;
 
+class procedure TTestCaseExtension.RegisterRepeatedTest(AIterations: Integer; SuitePath: string);
+begin
+  if _TestCasesEntries.CanRegister(Self) then
+  begin
+    TestFramework.RegisterTest(SuitePath, TRepeatedTest.Create(Self.Suite, AIterations, SuitePath));
+  end;
+end;
+
 class procedure TTestCaseExtension.RegisterTest;
 begin
   Self.RegisterTest(EmptyStr);
@@ -162,13 +171,18 @@ end;
 
 class procedure TTestCaseExtension.RegisterTest(SuitePath: string);
 begin
-  if _TestCasesEntries.IsEmpty or _TestCasesEntries.matchClass(Self) then
+  if _TestCasesEntries.CanRegister(Self) then
   begin
     TestFramework.RegisterTest(SuitePath, Self.Suite);
   end;
 end;
 
 { TTestCaseEntries }
+
+function TTestCaseEntries.CanRegister(AClassName: TTestCaseClass): Boolean;
+begin
+  Result := IsEmpty or matchClass(AClassName);
+end;
 
 constructor TTestCaseEntries.Create;
 begin
@@ -224,7 +238,7 @@ begin
   end;
 end;
 
-function TTestCaseEntries.matchClass(AClassName: TClass): Boolean;
+function TTestCaseEntries.matchClass(AClassName: TTestCaseClass): Boolean;
 begin
   Result := (FList.IndexOf(AClassName.ClassName) >= 0);
 end;
