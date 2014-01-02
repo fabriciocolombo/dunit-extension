@@ -25,9 +25,14 @@ type
     class function RunGUIMode: TTestResult;
     class function RunTextMode: TTestResult;
     class function RunXmlMode: TTestResult;
+
+    class procedure Sort(ATest: ITest);
+
+    class procedure QuickSort(const AList: IInterfaceList; L, R: Integer);
   public
     class function RunRegisteredTests(): Integer;overload;
     class function RunRegisteredTests(ARunMode: TRunMode): Integer;overload;
+    class procedure SortTests;
   end;
 
   TFileUtils = class
@@ -109,9 +114,60 @@ begin
   end;
 end;
 
+class procedure TTestRunnerUtils.Sort(ATest: ITest);
+begin
+  QuickSort(ATest.Tests, 0, ATest.Tests.Count-1);
+end;
+
+class procedure TTestRunnerUtils.SortTests;
+begin
+  Sort(TestFramework.RegisteredTests as ITest);
+end;
+
 class function TTestRunnerUtils.MustRunAsXml: Boolean;
 begin
   Result := FindCmdLineSwitch('xml', ['-', '/'], True);
+end;
+
+class procedure TTestRunnerUtils.QuickSort(const AList: IInterfaceList; L, R: Integer);
+
+  function Compare(const AList: IInterfaceList; L, R: Integer): Integer;
+  var
+    vLeft, vRigth: ITest;
+  begin
+    vLeft := AList[L] as ITest;
+    vRigth := AList[R] as ITest;
+
+    Result := CompareText(vLeft.Name, vRigth.Name);
+  end;
+
+var
+  I, J, P: Integer;
+begin
+  repeat
+    I := L;
+    J := R;
+    P := (L + R) shr 1;
+    repeat
+      while Compare(AList, I, P) < 0 do Inc(I);
+      while Compare(AList, J, P) > 0 do Dec(J);
+      if I <= J then
+      begin
+        if I <> J then
+        begin
+          AList.Exchange(I, J);
+        end;
+        if P = I then
+          P := J
+        else if P = J then
+          P := I;
+        Inc(I);
+        Dec(J);
+      end;
+    until I > J;
+    if L < J then QuickSort(AList, L, J);
+    L := I;
+  until I >= R;
 end;
 
 class function TTestRunnerUtils.MustRunAsText: Boolean;
