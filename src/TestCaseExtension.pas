@@ -2,7 +2,16 @@ unit TestCaseExtension;
 
 interface
 
+///	<summary>
+///	  Uncomment this line to integrate with DSharp unit tests
+///	</summary>
+{.$DEFINE DSharp}
+
+{$IFDEF DSharp}
+uses TestFramework, DSharp.Testing.DUnit, TestExtensions, TypInfo, Classes;
+{$ELSE}
 uses TestFramework, TestExtensions, TypInfo, Classes;
+{$ENDIF}
 
 type
   TTestCaseExtension = class(TTestCase)
