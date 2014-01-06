@@ -30,6 +30,7 @@ type
 
     class procedure QuickSort(const AList: IInterfaceList; L, R: Integer);
   public
+    class function GetRunMode: TRunMode;
     class function RunRegisteredTests(): Integer;overload;
     class function RunRegisteredTests(ARunMode: TRunMode): Integer;overload;
     class procedure SortTests;
@@ -51,15 +52,7 @@ class function TTestRunnerUtils.RunRegisteredTests: Integer;
 var
   vRunMode: TRunMode;
 begin
-  vRunMode := rmGUI;
-  if MustRunAsXml then
-  begin
-    vRunMode := rmXML;
-  end
-  else if MustRunAsText then
-  begin
-    vRunMode := rmText;
-  end;
+  vRunMode := GetRunMode;
 
   Result := Self.RunRegisteredTests(vRunMode);
 end;
@@ -168,6 +161,19 @@ begin
     if L < J then QuickSort(AList, L, J);
     L := I;
   until I >= R;
+end;
+
+class function TTestRunnerUtils.GetRunMode: TRunMode;
+begin
+  Result := rmGUI;
+  if MustRunAsXml then
+  begin
+    Result := rmXML;
+  end
+  else if MustRunAsText then
+  begin
+    Result := rmText;
+  end;
 end;
 
 class function TTestRunnerUtils.MustRunAsText: Boolean;
