@@ -12,7 +12,7 @@ uses
 
 const
   SUREFIRE_OUTPUT_DIRECTORY = '..\target\surefire-reports\';
-  SUREFIRE_TESTRESULT_PREFIX = 'TEST_';
+  SUREFIRE_TESTRESULT_PREFIX = 'TEST-';
 
 type
   TRunMode = (rmGUI, rmText, rmXML);

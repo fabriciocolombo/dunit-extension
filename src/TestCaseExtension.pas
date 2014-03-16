@@ -14,7 +14,13 @@ uses TestFramework, TestExtensions, TypInfo, Classes;
 {$ENDIF}
 
 type
-  TTestCaseExtension = class(TTestCase)
+{$IFDEF DSharp}
+  TestCaseAttribute = DSharp.Testing.DUnit.TestCaseAttribute;
+  ExpectedExceptionAttribute = DSharp.Testing.DUnit.ExpectedExceptionAttribute;
+{$ENDIF}
+
+  {$M+}
+  TTestCaseExtension = class(TTestCase, ITest)
   private
   public
     class procedure RegisterTest(SuitePath: string);overload;
@@ -31,6 +37,7 @@ type
     procedure CheckEqualsEnum(expected, actual: Variant; typeinfo: PTypeInfo; msg: string='';ErrorAddrs: Pointer = nil); virtual;
     procedure CheckEqualsText(expected, actual: string; msg: string = ''); virtual;
   end;
+  {$M-}
 
 implementation
 
@@ -58,13 +65,27 @@ type
 var
   _TestCasesEntries: TTestCaseEntries = nil;
 
+{$IFDEF CONDITIONALEXPRESSIONS}
+  {$IF (NOT DEFINED(CLR)) AND (CompilerVersion >= 23.0) }
+    {$DEFINE HAS_BUILTIN_RETURNADDRESS} // Requires ReturnAddress intrinsic function(Delphi XE2)
+  {$IFEND}
+{$ENDIF}
+
+{$IFNDEF HAS_BUILTIN_RETURNADDRESS}
+type
+  TReturnAddressFunc = function : Pointer;
+
+var
+  ReturnAddress: TReturnAddressFunc = CallerAddr;
+{$ENDIF}
+
 { TestCaseExtended }
 
 procedure TTestCaseExtension.CheckEqualsDate(expected, actual: TDateTime;msg: string);
 begin
   if (expected <> actual) then
   begin
-    FailNotEquals(DateTimeToStr(expected), DateTimeToStr(actual), msg, CallerAddr);
+    FailNotEquals(DateTimeToStr(expected), DateTimeToStr(actual), msg, ReturnAddress);
   end;
 end;
 
@@ -74,7 +95,7 @@ begin
   begin
     if (ErrorAddrs = nil) then
     begin
-      ErrorAddrs := CallerAddr;
+      ErrorAddrs := ReturnAddress;
     end;
 
     FailNotEquals(FloatToStr(expected), FloatToStr(actual), msg, ErrorAddrs);
@@ -85,7 +106,7 @@ procedure TTestCaseExtension.CheckEqualsDouble(expected, actual: Double;msg: str
 begin
   if (ErrorAddrs = nil) then
   begin
-    ErrorAddrs := CallerAddr;
+    ErrorAddrs := ReturnAddress;
   end;
 
   CheckEqualsDouble(expected, actual, 0.001, msg, ErrorAddrs);
@@ -97,7 +118,7 @@ begin
   begin
     if (ErrorAddrs = nil) then
     begin
-      ErrorAddrs := CallerAddr;
+      ErrorAddrs := ReturnAddress;
     end;
 
     FailNotEquals(GetEnumName(typeinfo, expected), GetEnumName(typeinfo, actual), msg, ErrorAddrs);
@@ -109,7 +130,7 @@ begin
   FCheckCalled := True;
   if AnsiUpperCase(expected) <> AnsiUpperCase(actual) then
   begin
-    FailNotEquals(expected, actual, msg, CallerAddr);
+    FailNotEquals(expected, actual, msg, ReturnAddress);
   end;
 end;
 
@@ -119,7 +140,7 @@ begin
   begin
     if (ErrorAddrs = nil) then
     begin
-      ErrorAddrs := CallerAddr;
+      ErrorAddrs := ReturnAddress;
     end;
 
     Fail(Format('%s actual <%f> must be greater than expected <%f>',[msg, actual, expected]), ErrorAddrs);
@@ -132,7 +153,7 @@ begin
   begin
     if (ErrorAddrs = nil) then
     begin
-      ErrorAddrs := CallerAddr;
+      ErrorAddrs := ReturnAddress;
     end;
 
     Fail(Format('%s actual <%f> must be greater than or equals to expected <%f>',[msg, actual, expected]), ErrorAddrs);
@@ -145,7 +166,7 @@ begin
   begin
     if (ErrorAddrs = nil) then
     begin
-      ErrorAddrs := CallerAddr;
+      ErrorAddrs := ReturnAddress;
     end;
 
     Fail(Format('%s actual string <%s> must be empty',[msg, actual]), ErrorAddrs);
@@ -158,7 +179,7 @@ begin
   begin
     if (ErrorAddrs = nil) then
     begin
-      ErrorAddrs := CallerAddr;
+      ErrorAddrs := ReturnAddress;
     end;
 
     Fail(Format('%s actual  string <%s> must not be empty',[msg, actual]), ErrorAddrs);
@@ -215,7 +236,11 @@ begin
   for I := 1 to ParamCount do
   begin
     S := ParamStr(I);
+    {$IF (CompilerVersion >= 20.0) } //Delphi 2009
+    if CharInSet(S[1], SwitchChars) then
+    {$ELSE}
     if (S[1] in SwitchChars) then
+    {$IFEND}
     begin
       if (AnsiCompareText(Copy(S, 2, Maxint), Switch) = 0) then
       begin

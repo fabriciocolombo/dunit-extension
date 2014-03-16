@@ -33,6 +33,7 @@ const
     C_ATTR_TESTS     = 'tests';      (* tests attribute for testsuite elements *)
     C_ATTR_MESSAGE   = 'message';    (* message attribute for failure elements *)
     C_ATTR_TYPE      = 'type';       (* type attribute for failure elements *)
+    C_ATTR_UNIT_NAME = 'unitname';
 
 type
 
@@ -60,6 +61,7 @@ type
     function Get_Testcase: IXMLTestcaseTypeList;
     function Get_Systemout: WideString;
     function Get_Systemerr: WideString;
+    function Get_UnitName: String;
     procedure Set_Errors(Value: string);
     procedure Set_Failures(Value: string);
     procedure Set_Name(Value: string);
@@ -67,10 +69,12 @@ type
     procedure Set_Time(Value: string);
     procedure Set_Systemout(Value: WideString);
     procedure Set_Systemerr(Value: WideString);
+    procedure Set_UnitName(Value: String);
     { Methods & Properties }
     property Errors: string read Get_Errors write Set_Errors;
     property Failures: string read Get_Failures write Set_Failures;
     property Name: string read Get_Name write Set_Name;
+    property UnitName: String read Get_UnitName write Set_UnitName;
     property Tests: string read Get_Tests write Set_Tests;
     property Time: string read Get_Time write Set_Time;
     property Properties: IXMLPropertiesType read Get_Properties;
@@ -188,6 +192,7 @@ type
     function Get_Testcase: IXMLTestcaseTypeList;
     function Get_Systemout: WideString;
     function Get_Systemerr: WideString;
+    function Get_UnitName: string;
     procedure Set_Errors(Value: string);
     procedure Set_Failures(Value: string);
     procedure Set_Name(Value: string);
@@ -195,6 +200,7 @@ type
     procedure Set_Time(Value: string);
     procedure Set_Systemout(Value: WideString);
     procedure Set_Systemerr(Value: WideString);
+    procedure Set_UnitName(Value: string);
   public
     procedure AfterConstruction; override;
   end;
@@ -352,9 +358,19 @@ begin
   Result := AttributeNodes[C_ATTR_TIME].Text;
 end;
 
+function TXMLTestsuiteType.Get_UnitName: string;
+begin
+  Result := AttributeNodes[C_ATTR_UNIT_NAME].Text;
+end;
+
 procedure TXMLTestsuiteType.Set_Time(Value: string);
 begin
   SetAttribute(C_ATTR_TIME, Value);
+end;
+
+procedure TXMLTestsuiteType.Set_UnitName(Value: string);
+begin
+  SetAttribute(C_ATTR_UNIT_NAME, Value);
 end;
 
 function TXMLTestsuiteType.Get_Properties: IXMLPropertiesType;

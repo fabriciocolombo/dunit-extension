@@ -53,7 +53,7 @@ uses
   XMLDoc, XMLIntf, xmldom, msxmldom,
 
   CIXMLReport,
-  TestFramework;
+  TestFramework, TestCaseExtension, StrUtils, TypInfo;
 
 const
    DEFAULT_PREFIX = 'dunit';
@@ -77,6 +77,8 @@ type
     procedure Log(AMessage: String; Args: Array of Const);overload;
 
     function FormatElapsedTime(AElapsedTime: TDateTime): String;
+
+    function GetUnitName(const suite: ITest): string;
   protected
     suiteStartTime: TDateTime;
     caseStartTime:  TDateTime;
@@ -135,7 +137,9 @@ function RunRegisteredTests(strFilePrefix: String = DEFAULT_PREFIX;
 
 implementation
 
-uses StrUtils;
+{$IF (CompilerVersion >= 21.0) } //Delphi 2010
+uses Rtti;
+{$IFEND}
 
 const
    CRLF = #13#10;
@@ -350,7 +354,7 @@ procedure TCIXMLTestListener.EndSuite(suite: ITest);
 var
    runTime: TDateTime;
    fstr:    TFileStream;
-   s:       String;
+   s:       AnsiString;
 
 begin
     runTime := now-suiteStartTime;
@@ -441,6 +445,7 @@ begin
           iSuite := Gettestsuite(iXMLDoc);
 
           iSuite.Name     := suite.getName;
+          iSuite.UnitName := GetUnitName(suite);
           iSuite.Tests    := '0';
           iSuite.Failures := '0';
           iSuite.Errors   := '0';
@@ -561,6 +566,32 @@ end;
 function TCIXMLTestListener.FormatElapsedTime(AElapsedTime: TDateTime): String;
 begin
   Result := StringReplace(Format('%3.3f', [AElapsedTime * 1E5]), ',', '.', []);
+end;
+
+function TCIXMLTestListener.GetUnitName(const suite: ITest): string;
+{$IF (CompilerVersion >= 21.0) } //Delphi 2010
+var
+  vRttiContext: TRttiContext;
+  vType: TRttiType;
+begin
+  Result := EmptyStr;
+  vRttiContext := TRttiContext.Create;
+  try
+    for vType in vRttiContext.GetTypes do
+    begin
+      if (vType.Name = suite.Name) then
+      begin
+        Result := String(GetTypeData(vType.Handle).UnitName);
+        Break;
+      end;
+    end;
+  finally
+    vRttiContext.Free;
+  end;
+{$ELSE}
+begin
+  Result := suite.Name;
+{$IFEND}
 end;
 
 end.
