@@ -79,6 +79,7 @@ type
     function FormatElapsedTime(AElapsedTime: TDateTime): String;
 
     function GetUnitName(const suite: ITest): string;
+    function Coalesce(AStackTrace, AMessage: string): string;
   protected
     suiteStartTime: TDateTime;
     caseStartTime:  TDateTime;
@@ -154,6 +155,15 @@ begin
    FileSuffix := DEFAULT_SUFFIX;
 end;
 
+function TCIXMLTestListener.Coalesce(AStackTrace, AMessage: string): string;
+begin
+  Result := AStackTrace;
+  if Trim(AStackTrace) = EmptyStr then
+  begin
+    Result := AMessage;
+  end;
+end;
+
 constructor TCIXMLTestListener.Create(strPrefix, strSuffix: String);
 begin
    inherited Create;
@@ -215,7 +225,7 @@ begin
 
       iCase.Error.Message := error.ThrownExceptionMessage;
       iCase.Error.Type_   := error.ThrownExceptionName;
-      iCase.Error.Text    := text2sgml(error.ThrownExceptionMessage);
+      iCase.Error.Text    := text2sgml(Coalesce(error.StackTrace, error.ThrownExceptionMessage));
     end;
 end;
 
@@ -251,7 +261,7 @@ begin
       
       iCase.Failure.Message := failure.ThrownExceptionMessage;
       iCase.Failure.Type_   := failure.ThrownExceptionName;
-      iCase.Failure.Text    := text2sgml(failure.ThrownExceptionMessage);
+      iCase.Failure.Text    := text2sgml(Coalesce(failure.StackTrace, failure.ThrownExceptionMessage))
     end;
 end;
 
