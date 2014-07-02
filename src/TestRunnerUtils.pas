@@ -85,6 +85,10 @@ end;
 
 class function TTestRunnerUtils.RunTextMode: TTestResult;
 begin
+  if not IsConsole then
+  begin
+    AllocConsole;
+  end;
   Result := TextTestRunner.RunRegisteredTests();
 end;
 
