@@ -26,6 +26,7 @@ const
     C_SYSTEM_ERR     = 'system-err'; (* the system-err element *)
     C_SYSTEM_OUT     = 'system-out'; (* the system-out element *)
     C_ATTR_NAME      = 'name';       (* name attribute for property, testcase and testsuite elements *)
+    C_ATTR_CLASS_NAME = 'classname'; (* name attribute for property, testcase and testsuite elements *)
     C_ATTR_VALUE     = 'value';      (* name attribute for property *)
     C_ATTR_TIME      = 'time';       (* time attribute for testcase and testsuite elements *)
     C_ATTR_ERRORS    = 'errors';     (* errors attribute for testsuite elements *)
@@ -115,13 +116,16 @@ type
     ['{A149138A-7F67-4321-BDD5-BCD171155BA7}']
     { Property Accessors }
     function Get_Name: string;
+    function Get_ClassName: string;
     function Get_Time: string;
     function Get_Failure: IXMLFailureType;
     function Get_Error: IXMLErrorType;
     procedure Set_Name(Value: string);
+    procedure Set_ClassName(Value: string);
     procedure Set_Time(Value: string);
     { Methods & Properties }
     property Name: string read Get_Name write Set_Name;
+    property ClassName: string read Get_ClassName write Set_ClassName;
     property Time: string read Get_Time write Set_Time;
     property Failure: IXMLFailureType read Get_Failure;
     property Error: IXMLErrorType read Get_Error;
@@ -234,10 +238,12 @@ type
   protected
     { IXMLTestcaseType }
     function Get_Name: string;
+    function Get_ClassName: string;
     function Get_Time: string;
     function Get_Failure: IXMLFailureType;
     function Get_Error: IXMLErrorType;
     procedure Set_Name(Value: string);
+    procedure Set_ClassName(Value: string);
     procedure Set_Time(Value: string);
   public
     procedure AfterConstruction; override;
@@ -464,6 +470,11 @@ begin
   Result := AttributeNodes[C_ATTR_NAME].Text;
 end;
 
+procedure TXMLTestcaseType.Set_ClassName(Value: string);
+begin
+  SetAttribute(C_ATTR_CLASS_NAME, Value);
+end;
+
 procedure TXMLTestcaseType.Set_Name(Value: string);
 begin
   SetAttribute(C_ATTR_NAME, Value);
@@ -482,6 +493,11 @@ end;
 function TXMLTestcaseType.Get_Failure: IXMLFailureType;
 begin
   Result := ChildNodes[C_FAILURE] as IXMLFailureType;
+end;
+
+function TXMLTestcaseType.Get_ClassName: string;
+begin
+  Result := AttributeNodes[C_ATTR_CLASS_NAME].Text;
 end;
 
 function TXMLTestcaseType.Get_Error: IXMLErrorType;

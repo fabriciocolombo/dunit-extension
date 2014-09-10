@@ -89,6 +89,7 @@ begin
   begin
     AllocConsole;
   end;
+  WriteLn('Running tests for: ' + ExtractFileName(GetModuleName(HInstance)));
   Result := TextTestRunner.RunRegisteredTests();
 end;
 

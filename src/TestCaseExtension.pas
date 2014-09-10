@@ -5,7 +5,7 @@ interface
 ///	<summary>
 ///	  Uncomment this line to integrate with DSharp unit tests
 ///	</summary>
-{.$DEFINE DSharp}
+{$DEFINE DSharp}
 
 {$IFDEF DSharp}
 uses TestFramework, DSharp.Testing.DUnit, TestExtensions, TypInfo, Classes;
@@ -36,12 +36,13 @@ type
     procedure CheckNotIsEmptyString(actual: String; msg: string='';ErrorAddrs: Pointer = nil); virtual;
     procedure CheckEqualsEnum(expected, actual: Variant; typeinfo: PTypeInfo; msg: string='';ErrorAddrs: Pointer = nil); virtual;
     procedure CheckEqualsText(expected, actual: string; msg: string = ''); virtual;
+    procedure CheckContains(subtext, actual: string; msg: string = ''); virtual;
   end;
   {$M-}
 
 implementation
 
-uses SysUtils, Math, Types;
+uses SysUtils, Math, Types, StrUtils;
 
 type
   TTestCaseEntries = class
@@ -80,6 +81,15 @@ var
 {$ENDIF}
 
 { TestCaseExtended }
+
+procedure TTestCaseExtension.CheckContains(subtext, actual, msg: string);
+begin
+  FCheckCalled := True;
+  if not AnsiContainsText(actual, subtext) then
+  begin
+    Fail(Format('%s expect the string <%s> contains the substring <%s>',[msg, actual, subtext]), ReturnAddress);
+  end;
+end;
 
 procedure TTestCaseExtension.CheckEqualsDate(expected, actual: TDateTime;msg: string);
 begin
@@ -121,7 +131,7 @@ begin
       ErrorAddrs := ReturnAddress;
     end;
 
-    FailNotEquals(GetEnumName(typeinfo, expected), GetEnumName(typeinfo, actual), msg, ErrorAddrs);
+    FailNotEquals(GetEnumName(typeinfo, expected), GetEnumName(typeinfo, actual), Format('[%s] %s', [typeinfo^.Name, msg]), ErrorAddrs);
   end;
 end;
 
@@ -169,7 +179,7 @@ begin
       ErrorAddrs := ReturnAddress;
     end;
 
-    Fail(Format('%s actual string <%s> must be empty',[msg, actual]), ErrorAddrs);
+    Fail(Format('%s Expected empty string but was <%s>.',[msg, actual]), ErrorAddrs);
   end;
 end;
 

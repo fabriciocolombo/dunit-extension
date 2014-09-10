@@ -78,7 +78,7 @@ type
 
     function FormatElapsedTime(AElapsedTime: TDateTime): String;
 
-    function GetUnitName(const suite: ITest): string;
+    function GetUnitName(const AClassName: string): string;
     function Coalesce(AStackTrace, AMessage: string): string;
   protected
     suiteStartTime: TDateTime;
@@ -188,6 +188,7 @@ begin
       { Add a new Test case to the suite }
       iCase := iSuite.Testcase.Add;
       iCase.Name := test.Name;
+      iCase.ClassName := GetUnitName(TObject(test).ClassName);
 
       runTime := now - caseStartTime;
       iCase.Time := FormatElapsedTime(runTime);
@@ -221,6 +222,7 @@ begin
 
       iCase      := iSuite.Testcase.Add;
       iCase.Name := error.FailedTest.GetName;
+      iCase.ClassName := GetUnitName(TObject(error.FailedTest).ClassName);
       iCase.Time := FormatElapsedTime(runTime);
 
       iCase.Error.Message := error.ThrownExceptionMessage;
@@ -257,6 +259,7 @@ begin
 
       iCase      := iSuite.Testcase.Add;
       iCase.Name := failure.FailedTest.GetName;
+      iCase.ClassName := GetUnitName(TObject(failure.FailedTest).ClassName);
       iCase.Time := FormatElapsedTime(runTime);
       
       iCase.Failure.Message := failure.ThrownExceptionMessage;
@@ -455,7 +458,7 @@ begin
           iSuite := Gettestsuite(iXMLDoc);
 
           iSuite.Name     := suite.getName;
-          iSuite.UnitName := GetUnitName(suite);
+          iSuite.UnitName := GetUnitName(suite.Name);
           iSuite.Tests    := '0';
           iSuite.Failures := '0';
           iSuite.Errors   := '0';
@@ -578,7 +581,7 @@ begin
   Result := StringReplace(Format('%3.3f', [AElapsedTime * 1E5]), ',', '.', []);
 end;
 
-function TCIXMLTestListener.GetUnitName(const suite: ITest): string;
+function TCIXMLTestListener.GetUnitName(const AClassName: string): string;
 {$IF (CompilerVersion >= 21.0) } //Delphi 2010
 var
   vRttiContext: TRttiContext;
@@ -589,7 +592,7 @@ begin
   try
     for vType in vRttiContext.GetTypes do
     begin
-      if (vType.Name = suite.Name) then
+      if (vType.Name = AClassName) then
       begin
         Result := String(GetTypeData(vType.Handle).UnitName);
         Break;
