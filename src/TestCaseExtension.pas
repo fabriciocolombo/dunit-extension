@@ -19,6 +19,14 @@ type
   ExpectedExceptionAttribute = DSharp.Testing.DUnit.ExpectedExceptionAttribute;
 {$ENDIF}
 
+  CategoryAttribute = class(TCustomAttribute)
+  private
+    FCategory : string;
+  public
+    constructor Create(const ACategory : string);
+    property Category : string read FCategory;
+  end;
+
   {$M+}
   TTestCaseExtension = class(TTestCase, ITest)
   private
@@ -42,12 +50,38 @@ type
 
 implementation
 
-uses SysUtils, Math, Types, StrUtils;
+uses SysUtils, Math, Types, StrUtils, System.Rtti, System.Generics.Collections;
+
+const
+  DELIMITER = ',';
+  EXCLUDE = '-';
 
 type
+  TCategoryFilter = class
+  private
+    Category: string;
+    Exclude: Boolean;
+  end;
+
+  TCategories = class
+  private
+    FActiveCategories: TDictionary<String,TCategoryFilter>;
+
+    function IsAllFiltersExclusions: Boolean;
+  public
+    procedure AddCategory(const ACategory: string);
+
+    function IsEmpty: Boolean;
+    function Match(const ACategories: TStringList): Boolean;
+
+    constructor Create;
+    destructor Destroy; override;
+  end;
+
   TTestCaseEntries = class
   private
-    FList: TStringList;
+    FTestCases: TStringList;
+    FActiveCategories: TCategories;
 
     procedure LoadTestCasesEntry;
 
@@ -55,9 +89,10 @@ type
   public
     function IsEmpty: Boolean;
 
-    function matchClass(AClassName: TTestCaseClass): Boolean;
+    function matchClass(AClass: TTestCaseClass): Boolean;
+    function matchCategory(AClass: TTestCaseClass): Boolean;
 
-    function CanRegister(AClassName: TTestCaseClass): Boolean;
+    function CanRegister(AClass: TTestCaseClass): Boolean;
 
     constructor Create;
     destructor Destroy; override;
@@ -219,21 +254,23 @@ end;
 
 { TTestCaseEntries }
 
-function TTestCaseEntries.CanRegister(AClassName: TTestCaseClass): Boolean;
+function TTestCaseEntries.CanRegister(AClass: TTestCaseClass): Boolean;
 begin
-  Result := IsEmpty or matchClass(AClassName);
+  Result := IsEmpty or matchClass(AClass) or matchCategory(AClass);
 end;
 
 constructor TTestCaseEntries.Create;
 begin
-  FList := TStringList.Create;
+  FTestCases := TStringList.Create;
+  FActiveCategories := TCategories.Create;
 
   LoadTestCasesEntry;
 end;
 
 destructor TTestCaseEntries.Destroy;
 begin
-  FList.Free;
+  FTestCases.Free;
+  FActiveCategories.Free;
   inherited;
 end;
 
@@ -246,11 +283,7 @@ begin
   for I := 1 to ParamCount do
   begin
     S := ParamStr(I);
-    {$IF (CompilerVersion >= 20.0) } //Delphi 2009
     if CharInSet(S[1], SwitchChars) then
-    {$ELSE}
-    if (S[1] in SwitchChars) then
-    {$IFEND}
     begin
       if (AnsiCompareText(Copy(S, 2, Maxint), Switch) = 0) then
       begin
@@ -269,22 +302,149 @@ end;
 
 function TTestCaseEntries.IsEmpty: Boolean;
 begin
-  Result := (FList.Count = 0);
+  Result := (FTestCases.Count = 0) and (FActiveCategories.IsEmpty);
 end;
 
 procedure TTestCaseEntries.LoadTestCasesEntry;
 var
-  vClasses: String;
+  values: String;
+  vList: TStringList;
+  vItem: string;
 begin
-  if Self.FindCmdLineSwitchValue('TestCases', vClasses) then
+  if Self.FindCmdLineSwitchValue('TestCases', values) then
   begin
-    FList.Text := StringReplace(vClasses, ';', sLineBreak, [rfReplaceAll]);
+    FTestCases.Delimiter := DELIMITER;
+    FTestCases.DelimitedText := values;
+  end;
+
+  if Self.FindCmdLineSwitchValue('Category', values) then
+  begin
+    vList := TStringList.Create;
+    try
+      vList.Delimiter := DELIMITER;
+      vList.DelimitedText := values;
+
+      for vItem in vList do
+      begin
+        FActiveCategories.AddCategory(vItem);
+      end;
+    finally
+      vList.Free;
+    end;
   end;
 end;
 
-function TTestCaseEntries.matchClass(AClassName: TTestCaseClass): Boolean;
+function TTestCaseEntries.matchCategory(AClass: TTestCaseClass): Boolean;
+var
+  vRttiContext: TRttiContext;
+  vAttribute: TCustomAttribute;
+  vCategories: TStringList;
+  vParent: TClass;
 begin
-  Result := (FList.IndexOf(AClassName.ClassName) >= 0);
+  Result := FActiveCategories.IsAllFiltersExclusions;
+
+  for vAttribute in vRttiContext.GetType(AClass).GetAttributes do
+  begin
+    if (vAttribute is CategoryAttribute) then
+    begin
+      vCategories := TStringList.Create;
+      try
+        vCategories.Delimiter := DELIMITER;
+        vCategories.DelimitedText := CategoryAttribute(vAttribute).Category;
+
+        Exit(FActiveCategories.Match(vCategories))
+      finally
+        vCategories.Free;
+      end;
+    end;
+  end;
+
+  vParent := AClass.ClassParent;
+  while (not Result) and (vParent <> TTestCaseExtension) and (vParent.InheritsFrom(TTestCase)) do
+  begin
+    Result := matchCategory(TTestCaseClass(vParent));
+
+    vParent := vParent.ClassParent;
+  end;
+end;
+
+function TTestCaseEntries.matchClass(AClass: TTestCaseClass): Boolean;
+begin
+  Result := (FTestCases.IndexOf(AClass.ClassName) >= 0);
+end;
+
+{ CategoryAttribute }
+
+constructor CategoryAttribute.Create(const ACategory: string);
+begin
+  FCategory := ACategory;
+end;
+
+{ TCategories }
+
+procedure TCategories.AddCategory(const ACategory: string);
+var
+  vCategoryFilter: TCategoryFilter;
+begin
+  vCategoryFilter := TCategoryFilter.Create;
+
+  if StartsStr(EXCLUDE, ACategory) then
+  begin
+    vCategoryFilter.Category := Copy(ACategory,2, MaxInt);
+    vCategoryFilter.Exclude  := True;
+  end
+  else
+  begin
+    vCategoryFilter.Category := ACategory;
+  end;
+
+  FActiveCategories.Add(vCategoryFilter.Category, vCategoryFilter);
+end;
+
+constructor TCategories.Create;
+begin
+  FActiveCategories := TObjectDictionary<String, TCategoryFilter>.Create([doOwnsValues]);
+end;
+
+destructor TCategories.Destroy;
+begin
+  FActiveCategories.Free;
+  inherited;
+end;
+
+function TCategories.IsAllFiltersExclusions: Boolean;
+var
+  vFilter: TCategoryFilter;
+begin
+  Result := not IsEmpty;
+  for vFilter in FActiveCategories.Values do
+  begin
+    Result := Result and vFilter.Exclude;
+  end;
+end;
+
+function TCategories.IsEmpty: Boolean;
+begin
+  Result := FActiveCategories.Count = 0;
+end;
+
+function TCategories.Match(const ACategories: TStringList): Boolean;
+var
+  vFilter: TCategoryFilter;
+begin
+  Result := True;
+
+  for vFilter in FActiveCategories.Values do
+  begin
+    if vFilter.Exclude then
+    begin
+      Result := Result and not (ACategories.IndexOf(vFilter.Category) >= 0);
+    end
+    else
+    begin
+      Result := Result and (ACategories.IndexOf(vFilter.Category) >= 0);
+    end;
+  end;
 end;
 
 initialization
