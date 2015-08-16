@@ -26,6 +26,8 @@ type
     class function RunTextMode: TTestResult;
     class function RunXmlMode: TTestResult;
 
+    class function GetTestOutputDirectory: string;
+
     class procedure Sort(ATest: ITest);
 
     class procedure QuickSort(const AList: IInterfaceList; L, R: Integer);
@@ -97,7 +99,7 @@ class function TTestRunnerUtils.RunXmlMode: TTestResult;
 var
   vXmlOutputPath: String;
 begin
-  vXmlOutputPath := ExtractFilePath(Application.ExeName) + SUREFIRE_OUTPUT_DIRECTORY;
+  vXmlOutputPath := ExtractFilePath(Application.ExeName) + GetTestOutputDirectory;
 
   TFileUtils.DeleteAllFiles(vXmlOutputPath + '*.xml', '.xml');
 
@@ -179,6 +181,23 @@ begin
   begin
     Result := rmText;
   end;
+end;
+
+class function TTestRunnerUtils.GetTestOutputDirectory: string;
+var
+  i: Integer;
+begin
+  Result := SUREFIRE_OUTPUT_DIRECTORY;
+  for i := 1 to ParamCount do
+  begin
+    if SameText(Copy(ParamStr(i), 2, Maxint), 'output') and not (i = ParamCount) then
+    begin
+      Result := ParamStr(i+1);
+      Break;
+    end;
+  end;
+
+  Result := IncludeTrailingPathDelimiter(Result);
 end;
 
 class function TTestRunnerUtils.MustRunAsText: Boolean;

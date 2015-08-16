@@ -54,7 +54,7 @@ uses SysUtils, Math, Types, StrUtils, System.Rtti, System.Generics.Collections;
 
 const
   DELIMITER = ',';
-  EXCLUDE = '-';
+  EXCLUDES = ['-', '!'];
 
 type
   TCategoryFilter = class
@@ -388,7 +388,7 @@ var
 begin
   vCategoryFilter := TCategoryFilter.Create;
 
-  if StartsStr(EXCLUDE, ACategory) then
+  if CharInSet(ACategory[1], EXCLUDES) then
   begin
     vCategoryFilter.Category := Copy(ACategory,2, MaxInt);
     vCategoryFilter.Exclude  := True;

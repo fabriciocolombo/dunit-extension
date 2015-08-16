@@ -2,3 +2,7 @@ syntax: glob
 *.dcu
 *.~dpk
 __history
+samples/SimpleTest.exe
+samples/SimpleTest.dsk
+samples/SimpleTest.rest
+samples/target
